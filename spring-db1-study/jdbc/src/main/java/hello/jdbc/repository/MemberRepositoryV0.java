@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 
 import java.sql.*;
+import java.util.NoSuchElementException;
 
 /**
  * JDBC - DriverManager 사용
@@ -40,6 +41,81 @@ public class MemberRepositoryV0 {
             close(con, pstmt, null);
         }
 
+    }
+
+    public Member findById(String memberId) throws SQLException {
+        String sql = "select * from member where member_id = ?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, memberId); // 파라미터로 받은 memberId값을 넘겨서 쿼리 세팅
+
+            rs = pstmt.executeQuery();// Query는 select, Update는 데이터를 변경할 때 쓰는 것!
+            if (rs.next()) { //cursor가 처음엔 데이터가 없는 첫 빈공간에 가있음 이걸 한 번 넘겨주는 것임
+                //rs.next() -> 다음으로 넘겼을 때 boolean 값을 반환함
+                Member member = new Member(); // DB응답을 받을 객체 생성
+                member.setMemberId(rs.getString("member_id")); //ResultSet에 저장된 DB응답 결과 빼오기
+                member.setMoney(rs.getInt("money"));
+                return member;
+            } else {
+                throw new NoSuchElementException("member not found memberId=" + memberId);
+            }
+
+        } catch (SQLException e) {
+            log.info("db error", e);
+            throw e;
+        } finally {
+            close(con, pstmt, rs);
+        }
+
+    }
+
+    public void update(String memberId, int money) throws SQLException {
+        String sql = "update member set money=? where member_id=?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setInt(1, money);
+            pstmt.setString(2, memberId);
+            int resultSize = pstmt.executeUpdate(); // executeUpdate()는 영향을 받은 행(row)의 갯수를 반환해줌(int)
+            log.info("resultSize={}", resultSize);
+
+        } catch (SQLException e) {
+            log.info("db error", e);
+            throw e;
+        } finally {
+            close(con, pstmt, null);
+        }
+
+    }
+
+    public void delete(String memberId) throws SQLException {
+        String sql = "delete from member where member_id=?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, memberId);
+            pstmt.executeUpdate(); // executeUpdate()는 영향을 받은 행(row)의 갯수를 반환해줌(int)
+
+        } catch (SQLException e) {
+            log.info("db error", e);
+            throw e;
+        } finally {
+            close(con, pstmt, null);
+        }
     }
 
     private void close(Connection con, Statement stmt, ResultSet rs) {
